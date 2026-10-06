@@ -6,6 +6,8 @@
   try { an = localStorage.getItem('lk-ton') !== 'aus'; } catch (_) { /* egal */ }
 
   function start() {
+    // Safari (iPad/iPhone) startet den Ton oft pausiert: bei jeder Berührung wieder anschieben
+    if (ctx && ctx.state === 'suspended') { try { ctx.resume(); } catch (_) { /* egal */ } }
     if (ctx || !an) return;
     try {
       ctx = new (window.AudioContext || window.webkitAudioContext)();
