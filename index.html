@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#2b1d16">
+<title>Löwenküche</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<style>
+  @font-face{font-family:"Barlow Semi Condensed";font-weight:600;src:url(/vendor/barlow-semi-condensed-600.woff2) format("woff2");font-display:swap}
+  @font-face{font-family:"Barlow Semi Condensed";font-weight:700;src:url(/vendor/barlow-semi-condensed-700.woff2) format("woff2");font-display:swap}
+  @font-face{font-family:"Barlow Semi Condensed";font-weight:800;src:url(/vendor/barlow-semi-condensed-800.woff2) format("woff2");font-display:swap}
+  :root{
+    --bg:#2b1d16;--karte:#fff8ee;--karte2:#f3e6d2;--text:#2b1d16;--leise:#6d5a4c;--akzent:#c8502e;--akzent2:#e98a2b;
+    --gut:#3f9b4f;--schlecht:#c0392b;--rand:#e2cfb4;--gold:#e0a82e;
+    --schrift:"Barlow Semi Condensed",system-ui,-apple-system,"Segoe UI",sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:600 17px/1.4 var(--schrift)}
+  canvas#bild{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+  button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 16px;background:var(--akzent);color:#fff;font-weight:800;letter-spacing:.02em;box-shadow:0 3px 0 #8f3218}
+  button:active{transform:translateY(2px);box-shadow:0 1px 0 #8f3218}
+  button.zwei{background:var(--karte2);color:var(--text);box-shadow:0 3px 0 #c9b08c}
+  button:disabled{opacity:.45;cursor:default;transform:none}
+  button:focus-visible,input:focus-visible{outline:3px solid var(--akzent2);outline-offset:2px}
+  input{font:inherit;padding:10px 12px;border-radius:10px;border:2px solid var(--rand);background:#fff;color:var(--text);width:100%}
+  a{color:var(--akzent)}
+  [hidden]{display:none!important}
+  .leise{color:var(--leise)}
+
+  /* Bildschirme (Menüs) */
+  .schirm{position:fixed;inset:0;display:grid;place-items:center;padding:16px;overflow:auto;z-index:20;background:radial-gradient(ellipse at center,rgba(43,29,22,.25),rgba(43,29,22,.7))}
+  .karte{background:var(--karte);border-radius:20px;padding:22px;width:100%;max-width:480px;box-shadow:0 10px 40px rgba(0,0,0,.35);border:3px solid var(--rand)}
+  .karte.breit{max-width:720px}
+  h1{font-size:2.6rem;line-height:1;margin:0 0 4px;font-weight:800;color:var(--akzent)}
+  h2{font-size:1.6rem;margin:0 0 8px;font-weight:800}
+  h3{font-size:1.15rem;margin:16px 0 6px;font-weight:800}
+  p{margin:0 0 10px}
+  .reihe{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .reihe>*{flex:1 1 auto}
+  .stapel{display:grid;gap:10px}
+  .tiere{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0 14px}
+  .tiere button{font-size:1.9rem;padding:6px 0;background:var(--karte2);box-shadow:0 3px 0 #c9b08c;color:var(--text)}
+  .tiere button[aria-pressed="true"]{background:var(--akzent2);box-shadow:0 3px 0 #a3561a}
+  .tiere small{display:block;font-size:.72rem;font-weight:700}
+  .gerichte{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:8px 0}
+  .gerichte button{background:var(--karte2);color:var(--text);box-shadow:0 3px 0 #c9b08c;padding:10px 6px;font-size:1rem}
+  .gerichte button .ico{display:block;font-size:2rem}
+  .gerichte button[aria-pressed="true"]{background:var(--akzent2);color:#fff;box-shadow:0 3px 0 #a3561a}
+  .gerichte button small{display:block;font-weight:600;font-size:.78rem;opacity:.85}
+  .fehler{color:var(--schlecht);min-height:1.4em;margin:6px 0 0}
+  .code{font-size:2.6rem;font-weight:800;letter-spacing:.18em;text-align:center;background:var(--karte2);border-radius:14px;padding:6px}
+  ul.leute{list-style:none;padding:0;margin:8px 0;display:grid;gap:6px}
+  ul.leute li{background:var(--karte2);border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center}
+  ul.leute li.weg{opacity:.5}
+  ul.leute small{margin-left:auto;color:var(--leise)}
+  .titelbild{font-size:3.2rem;line-height:1;margin-bottom:4px}
+  .fuss{margin-top:14px;font-size:.9rem;text-align:center}
+  .statistik{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+  .statistik div{background:var(--karte2);border-radius:12px;padding:8px;text-align:center}
+  .statistik b{display:block;font-size:1.5rem}
+  .hilfe li{margin-bottom:6px}
+  kbd{background:var(--karte2);border:1px solid var(--rand);border-radius:6px;padding:0 6px;font:inherit;font-size:.9em}
+
+  /* HUD */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:10}
+  .oben{position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+  .kachel{background:rgba(255,248,238,.94);border-radius:14px;padding:6px 12px;box-shadow:0 3px 10px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px;font-weight:800}
+  #hudTagKachel{flex-direction:column;align-items:stretch;min-width:150px;gap:3px}
+  .uhr{height:8px;border-radius:4px;background:#e2cfb4;overflow:hidden}
+  #hudUhr{height:100%;width:0;background:linear-gradient(90deg,#f2c230,#e98a2b)}
+  #hudMenu{font-size:1.4rem;letter-spacing:.05em}
+  #hudSterne{color:var(--gold);font-size:1.3rem;letter-spacing:.08em}
+  #hudPause{pointer-events:auto;margin-left:auto;padding:6px 14px}
+  #meldung{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:2.6rem;font-weight:800;color:#fff;text-shadow:0 3px 0 #8f3218,0 0 20px rgba(0,0,0,.5);transition:opacity .4s;opacity:0;white-space:nowrap}
+  #meldung small{display:block;font-size:1.1rem;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+  #hinweis{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(43,29,22,.85);color:#fff;border-radius:12px;padding:6px 14px;font-size:1rem;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
+  #nacht{position:absolute;right:8px;top:70px;width:300px;max-height:calc(100% - 90px);overflow:auto;pointer-events:auto;background:rgba(255,248,238,.96);border-radius:16px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+  #nacht h3{margin:0 0 4px}
+  #nacht p{font-size:.92rem;color:var(--leise)}
+  #laden{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+  #laden button{background:var(--karte2);color:var(--text);box-shadow:0 3px 0 #c9b08c;padding:8px 4px;font-size:.92rem;line-height:1.15}
+  #laden button .ico{display:block;font-size:1.5rem}
+  #laden button.weg{opacity:.35}
+  #nacht .reihe button{font-size:.9rem;padding:8px 8px}
+  #bereitKnopf{width:100%;margin-top:8px;font-size:1.15rem;background:var(--gut);box-shadow:0 3px 0 #2a6a35}
+  #bereitKnopf[aria-pressed="true"]{background:#888;box-shadow:0 3px 0 #555}
+  #bereitWer{font-size:.85rem;margin-top:4px;text-align:center}
+  #nachtZu{display:none}
+  #rangliste{position:absolute;right:8px;top:70px;width:220px;background:rgba(255,248,238,.94);border-radius:14px;padding:8px 12px;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+  #rangliste ol{margin:4px 0 0;padding-left:22px}
+  #rangliste li.ich{color:var(--akzent)}
+  #karten .wahl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
+  #karten .wahl button{background:var(--karte2);color:var(--text);box-shadow:0 4px 0 #c9b08c;padding:16px 10px;text-align:center;border:3px solid var(--rand)}
+  #karten .wahl button .ico{font-size:3rem;display:block}
+  #karten .wahl button b{display:block;font-size:1.25rem}
+  #karten .wahl button small{display:block;font-weight:600;color:var(--leise);margin-top:4px}
+
+  /* Touch */
+  #touch{position:fixed;inset:0;z-index:9;touch-action:none;pointer-events:auto}
+  #tStick{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.4);transform:translate(-50%,-50%);display:none}
+  #tKnauf{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.75)}
+  .tKnopf{position:absolute;width:84px;height:84px;border-radius:50%;background:rgba(200,80,46,.85);color:#fff;display:grid;place-items:center;font-size:1rem;font-weight:800;text-align:center;line-height:1.05;border:3px solid rgba(255,255,255,.6);user-select:none}
+  .tKnopf.an{background:rgba(233,138,43,.95)}
+  #tGreifen{right:calc(24px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
+  #tArbeit{right:calc(122px + env(safe-area-inset-right));bottom:calc(64px + env(safe-area-inset-bottom));width:72px;height:72px;background:rgba(63,155,79,.85)}
+  .tKnopf span{font-size:1.6rem;display:block}
+
+  /* Handy quer: schmales Panel rechts, kleine Kacheln */
+  @media (max-height:500px) and (min-width:701px){
+    .kachel{padding:3px 8px;font-size:.9rem}
+    #nacht{width:250px;top:52px;max-height:calc(100% - 60px);padding:8px}
+    #nacht p{display:none}
+    #nacht.zu #nachtInhalt{display:none}
+    #nachtZu{display:block;position:absolute;right:8px;top:6px;padding:3px 10px;font-size:.85rem}
+    #laden button{font-size:.8rem;padding:5px 2px}
+    #laden button .ico{font-size:1.1rem}
+    #bereitKnopf{font-size:1rem;padding:8px}
+    #rangliste{top:52px}
+    .tKnopf{width:70px;height:70px}
+    #tArbeit{width:60px;height:60px;right:calc(104px + env(safe-area-inset-right));bottom:calc(40px + env(safe-area-inset-bottom))}
+  }
+  @media (max-width:700px){
+    h1{font-size:2.1rem}
+    .oben{gap:5px}
+    .kachel{padding:4px 8px;font-size:.92rem}
+    #hudTagKachel{min-width:110px}
+    #hudMenu{font-size:1.1rem}
+    #nacht{left:8px;right:8px;width:auto;top:calc(64px + env(safe-area-inset-top));max-height:42%;padding:10px}
+    #nacht p{display:none}
+    #nacht.zu #nachtInhalt{display:none}
+    #nachtZu{display:block;position:absolute;right:8px;top:8px;padding:4px 10px;font-size:.85rem}
+    #laden{grid-template-columns:repeat(4,1fr)}
+    #laden button{font-size:.78rem;padding:6px 2px}
+    #rangliste{top:auto;bottom:130px;right:8px;width:180px;font-size:.9rem}
+    .tiere{grid-template-columns:repeat(3,1fr)}
+    #karten .wahl{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<canvas id="bild" aria-label="Spielfeld"></canvas>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div class="oben">
+    <div class="kachel" id="hudTagKachel"><span id="hudTag">Tag 1</span><div class="uhr"><div id="hudUhr"></div></div></div>
+    <div class="kachel" id="hudMenu" title="Speisekarte"></div>
+    <div class="kachel">🪙 <span id="hudMuenzen">0</span></div>
+    <div class="kachel" id="hudSterne" title="Ruf">★★★</div>
+    <button id="hudPause" aria-label="Menü">☰</button>
+  </div>
+  <div id="meldung"></div>
+  <div id="hinweis"></div>
+  <div id="nacht" hidden>
+    <button id="nachtZu" class="zwei">–</button>
+    <h3 id="nachtTitel">Vor Tag 1</h3>
+    <div id="nachtInhalt">
+      <p>Nachts kannst du umbauen: <b>Greifen</b> hebt Geräte hoch und stellt sie ab, <b>Arbeiten</b> dreht sie. Gekauftes steht an der Tür.</p>
+      <div id="laden"></div>
+      <div class="reihe"><button id="tellerKnopf" class="zwei"></button><button id="wuerfelKnopf" class="zwei"></button></div>
+    </div>
+    <button id="bereitKnopf" aria-pressed="false">Küche öffnen</button>
+    <div id="bereitWer" class="leise"></div>
+  </div>
+  <div id="rangliste" hidden><b>Olympia</b><ol id="rangListe"></ol></div>
+</div>
+
+<!-- Touch-Steuerung -->
+<div id="touch" hidden>
+  <div id="tStick"><div id="tKnauf"></div></div>
+  <div class="tKnopf" id="tArbeit"><div><span>🔪</span><small id="tArbeitText">Arbeit</small></div></div>
+  <div class="tKnopf" id="tGreifen"><div><span>✋</span>Greifen</div></div>
+</div>
+
+<!-- Start -->
+<div class="schirm" id="start" hidden>
+  <div class="karte">
+    <div class="titelbild">🦁🍳</div>
+    <h1>Löwenküche</h1>
+    <p class="leise">Kocht zusammen, bedient die Gäste, baut nachts eure Küche um – 15 Tage bis zum Kultrestaurant.</p>
+    <label for="nameFeld"><b>Dein Name</b></label>
+    <input id="nameFeld" maxlength="16" autocomplete="nickname" placeholder="z. B. Matteo">
+    <div style="margin-top:10px"><b>Dein Koch</b></div>
+    <div class="tiere" id="tierWahl"></div>
+    <div class="stapel">
+      <button id="soloKnopf">Allein kochen</button>
+      <div class="reihe">
+        <button id="koopKnopf" class="zwei">Koop-Küche eröffnen</button>
+      </div>
+      <div class="reihe">
+        <input id="codeFeld" maxlength="4" placeholder="CODE" autocapitalize="characters" style="max-width:130px;text-transform:uppercase;letter-spacing:.15em;font-weight:800" aria-label="Küchen-Code">
+        <button id="beitretenKnopf" class="zwei">Beitreten</button>
+      </div>
+    </div>
+    <p class="fehler" id="startFehler"></p>
+    <div class="statistik" id="startStatistik"></div>
+    <div class="fuss"><a href="#" id="hilfeLink">So wird gespielt</a> · <a href="#" id="tonLink">Ton: an</a> · <a href="/datenschutz">Datenschutz</a></div>
+  </div>
+</div>
+
+<!-- Solo: Startgericht -->
+<div class="schirm" id="solo" hidden>
+  <div class="karte">
+    <h2>Womit eröffnest du?</h2>
+    <p class="leise">Dein erstes Gericht. Alle drei Tage kommt ein neues dazu – oder eine Herausforderung mit Belohnung.</p>
+    <div class="gerichte" id="soloGerichte"></div>
+    <div class="reihe" style="margin-top:12px"><button id="soloZurueck" class="zwei">Zurück</button><button id="soloLos">Los geht's</button></div>
+  </div>
+</div>
+
+<!-- Koop-Lobby -->
+<div class="schirm" id="lobby" hidden>
+  <div class="karte">
+    <h2 id="lobbyTitel">Koop-Küche</h2>
+    <div id="lobbyCodeTeil">
+      <p class="leise">Gib deinen Freunden diesen Code (bis zu 4 Köche):</p>
+      <div class="code" id="lobbyCode">----</div>
+      <div class="reihe" style="margin-top:8px"><button id="lobbyLink" class="zwei">Einladungslink kopieren</button></div>
+    </div>
+    <div id="lobbyOlymp" hidden><p id="lobbyOlympText"></p></div>
+    <ul class="leute" id="lobbyLeute"></ul>
+    <div id="lobbyWahl">
+      <h3>Startgericht</h3>
+      <div class="gerichte" id="lobbyGerichte"></div>
+    </div>
+    <p class="leise" id="lobbyHinweis"></p>
+    <div class="reihe"><button id="lobbyRaus" class="zwei">Verlassen</button><button id="lobbyStart">Küche öffnen</button></div>
+    <p class="fehler" id="lobbyFehler"></p>
+  </div>
+</div>
+
+<!-- Karte wählen -->
+<div class="schirm" id="karten" hidden>
+  <div class="karte breit">
+    <h2>Neuer Abschnitt!</h2>
+    <p class="leise" id="kartenText">Wähle eine Karte.</p>
+    <div class="wahl" id="kartenWahl"></div>
+  </div>
+</div>
+
+<!-- Ende -->
+<div class="schirm" id="ende" hidden>
+  <div class="karte">
+    <div class="titelbild" id="endeBild">🏆</div>
+    <h2 id="endeTitel">Feierabend</h2>
+    <p id="endeText" class="leise"></p>
+    <div class="statistik" id="endeStatistik"></div>
+    <ol id="endeRang" hidden></ol>
+    <p id="endeFreischalt"></p>
+    <div class="reihe"><button id="endeMenue" class="zwei">Zum Menü</button><button id="endeNochmal">Nochmal</button><a id="endeOlymp" hidden href="/"><button style="width:100%">Zurück zur Olympiade</button></a></div>
+  </div>
+</div>
+
+<!-- Pause / Menü -->
+<div class="schirm" id="pause" hidden>
+  <div class="karte">
+    <h2 id="pauseTitel">Pause</h2>
+    <div class="stapel">
+      <button id="pauseWeiter">Weiter</button>
+      <button id="pauseHilfe" class="zwei">So wird gespielt</button>
+      <button id="pauseTon" class="zwei">Ton: an</button>
+      <button id="pauseRaus" class="zwei">Küche verlassen</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hilfe -->
+<div class="schirm" id="hilfe" hidden>
+  <div class="karte breit hilfe">
+    <h2>So wird gespielt</h2>
+    <ul>
+      <li><b>Laufen:</b> <kbd>WASD</kbd> oder Pfeiltasten · Gamepad: linker Stick · Handy: links wischen</li>
+      <li><b>Greifen / Ablegen:</b> <kbd>Leertaste</kbd> oder <kbd>E</kbd> · Gamepad <kbd>A</kbd> · Handy ✋</li>
+      <li><b>Arbeiten</b> (gedrückt halten: schneiden, spülen): <kbd>F</kbd> oder <kbd>Shift</kbd> · Gamepad <kbd>X</kbd> · Handy 🔪. Nachts dreht es Geräte.</li>
+    </ul>
+    <h3>Der Tag</h3>
+    <ul>
+      <li>Gäste kommen durch die Tür, setzen sich und zeigen ihr Gericht in einer Blase. Der Balken über ihnen ist ihre Geduld.</li>
+      <li>Hol Zutaten aus den Kisten, schneide sie auf dem Brett, brate sie auf dem Herd. Nimm einen Teller aus dem Regal und leg alles darauf.</li>
+      <li>Bring den fertigen Teller an den Tisch. Nach dem Essen zahlen die Gäste – je schneller, desto mehr Trinkgeld.</li>
+      <li>Schmutzige Teller vom Tisch zur Spüle bringen, dort spülen und zurück ins Regal.</li>
+      <li>Läuft eine Gruppe wütend weg, verliert ihr einen Stern. Ohne Sterne ist der Lauf vorbei.</li>
+      <li>Vorsicht: Was zu lange auf dem Herd liegt, verbrennt. Verbranntes kommt in den Müll.</li>
+    </ul>
+    <h3>Rezepte</h3>
+    <ul>
+      <li>🥗 Salat: Salatkopf schneiden · 🍔 Burger: Fleisch schneiden, Hack braten, mit Brötchen · 🥩 Steak: Fleisch braten</li>
+      <li>🍟 Pommes: Kartoffel schneiden, frittieren · 🍕 Pizza: Teig + Tomatenstücke + Reibekäse auf einer Ablage, dann in den Ofen</li>
+      <li>🥗🍅 Bunter Salat: Salat + Tomate · 🍔🧀 Käseburger: Burger + Reibekäse</li>
+    </ul>
+    <h3>Die Nacht</h3>
+    <ul>
+      <li>Kauft neue Geräte mit euren Münzen, verschiebt und dreht alles, wie ihr es braucht. Fließbänder schieben Dinge weiter, Greifarme heben sie von hinten nach vorn.</li>
+      <li>Nach Tag 3, 6, 9 und 12 wählt ihr eine Karte: ein neues Gericht oder eine Herausforderung mit Belohnung.</li>
+    </ul>
+    <button id="hilfeZu" style="margin-top:10px">Verstanden</button>
+  </div>
+</div>
+
+<script src="/vendor/three.min.js"></script>
+<script src="/js/logik.js"></script>
+<script src="/js/modelle.js"></script>
+<script src="/js/ton.js"></script>
+<script src="/js/spiel.js"></script>
+</body>
+</html>

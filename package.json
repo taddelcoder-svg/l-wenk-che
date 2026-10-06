@@ -1,0 +1,17 @@
+{
+  "name": "loewenkueche",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Löwenküche – Koch-Roguelite im Browser: Solo, Online-Koop und Olympia-Disziplin",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/logik.test.js test/raeume.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
