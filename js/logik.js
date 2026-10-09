@@ -137,12 +137,28 @@
       }
     }
   }
-  // Die Kachel, auf die eine Figur schaut
-  function zielKachel(x, y, r) {
+  // Die Kachel, auf die eine Figur schaut. Mit hat(tx, ty) (steht dort ein Gerät?) wird nachgeholfen:
+  // Schaut man ins Leere, gilt das nächste Gerät direkt neben einem – solange es nicht hinter einem liegt.
+  // So klappt Greifen auch, wenn man an der Theke entlangläuft und nicht genau hinschaut.
+  function zielKachel(x, y, r, hat) {
     const c = Math.cos(r), s = Math.sin(r);
     let tx = Math.floor(x + c * 0.78), ty = Math.floor(y + s * 0.78);
     if (tx === Math.floor(x) && ty === Math.floor(y)) { tx = Math.floor(x + c * 1.15); ty = Math.floor(y + s * 1.15); }
-    return [tx, ty];
+    if (!hat || hat(tx, ty)) return [tx, ty];
+    const px = Math.floor(x), py = Math.floor(y);
+    let best = null, bw = Infinity;
+    for (const [dx, dy] of RICHTUNG) {
+      const nx = px + dx, ny = py + dy;
+      if (!hat(nx, ny)) continue;
+      let a = Math.abs(Math.atan2(dy, dx) - r) % (Math.PI * 2);
+      if (a > Math.PI) a = Math.PI * 2 - a;
+      if (a > 2.0) continue;                                    // liegt hinter einem
+      const abst = dx > 0 ? nx - x : dx < 0 ? x - (nx + 1) : dy > 0 ? ny - y : y - (ny + 1);
+      if (abst > 0.62) continue;                                // zu weit weg
+      const w = a + abst * 2;
+      if (w < bw) { bw = w; best = [nx, ny]; }
+    }
+    return best || [tx, ty];
   }
   const richtungAus = r => ((Math.round(r / (Math.PI / 2)) % 4) + 4) % 4;
   const innen = (x, y) => x >= 1 && x <= W - 2 && y >= 1 && y <= H - 2;
@@ -210,6 +226,8 @@
       return false;
     }
     frei(tx, ty) { return innen(tx, ty) && !this.bei(tx, ty); }
+    // Angepeilte Kachel einer Figur; wer nachts ein Gerät trägt, zielt genau (zum Abstellen)
+    ziel(s) { return s.tr ? zielKachel(s.x, s.y, s.r) : zielKachel(s.x, s.y, s.r, (x, y) => !!this.bei(x, y)); }
 
     grundLayout() {
       const rush = this.modus === 'rush';
@@ -227,11 +245,11 @@
         this.setzen('kiste', kx, ky, 2, { z });
         if (ky === 1) kx--; else ky++;
       }
-      // Durchreiche als Insel
-      for (let ix = 3; ix <= 6; ix++) this.setzen(ix === 4 && rush ? 'brett' : 'theke', ix, 3, 3);
+      // Durchreiche als Insel, mit zwei Reihen Gang davor, damit man sich nicht gegenseitig (und hinter der Insel) verdeckt
+      for (let ix = 3; ix <= 6; ix++) this.setzen(ix === 4 && rush ? 'brett' : 'theke', ix, 4, 3);
       if (rush) {
-        this.setzen('spuelmaschine', 1, 3, 0);
-        for (const t of noetig) { const p = this.freieKachel(7, 3, false); if (p) this.setzen(t, p[0], p[1], 3); }
+        this.setzen('spuelmaschine', 1, 4, 0);
+        for (const t of noetig) { const p = this.freieKachel(7, 4, false); if (p) this.setzen(t, p[0], p[1], 3); }
       }
       const tische = rush ? [[3, 7], [6, 7], [10, 7], [3, 9], [10, 9]] : [[3, 7], [6, 7], [10, 7]];
       for (const [tx, ty] of tische) this.setzen('tisch', tx, ty, 0);
@@ -286,7 +304,7 @@
     }
 
     greifen(s) {
-      const [tx, ty] = zielKachel(s.x, s.y, s.r);
+      const [tx, ty] = this.ziel(s);
       const g = this.bei(tx, ty);
       if (this.phase === 'nacht') {
         if (s.tr) {
@@ -380,7 +398,7 @@
 
     drehen(s) {
       if (this.phase !== 'nacht') return;
-      const [tx, ty] = zielKachel(s.x, s.y, s.r);
+      const [tx, ty] = this.ziel(s);
       const g = this.bei(tx, ty);
       if (g) { g.r = (g.r + 1) % 4; this.ev.push({ e:'dreh', x:tx + 0.5, y:ty + 0.5 }); }
     }
@@ -606,7 +624,7 @@
       // Arbeiten (Schneiden, Spülen) solange gedrückt
       for (const s of this.spieler.values()) {
         if (!s.w) continue;
-        const [tx, ty] = zielKachel(s.x, s.y, s.r);
+        const [tx, ty] = this.ziel(s);
         const g = this.bei(tx, ty);
         if (!g) continue;
         if (g.t === 'brett' && g.it && SCHNEIDEN[g.it.z]) {

@@ -124,6 +124,25 @@
   }
   // Sprechblase mit Gericht-Symbol
   const BILD = { salat:'🥗', burger:'🍔', steak:'🥩', pommes:'🍟', pizza:'🍕', bunt:'🥗🍅', kaeseburger:'🍔🧀' };
+  const DING_BILD = {
+    tomate:'🍅', tomate_g:'🍅🔪', salat:'🥬', salat_g:'🥬🔪', fleisch:'🥩', hack:'🥩🔪', patty:'🟤', steak:'🥩🔥',
+    broetchen:'🍞', kartoffel:'🥔', kartoffel_g:'🥔🔪', pommes:'🍟', teig:'🫓', kaese:'🧀', kaese_g:'🧀🔪',
+    pizza_t:'🫓🍅', pizza_roh:'🫓🧀', pizza:'🍕', verbrannt:'💀', teller:'🍽️', stapel:'🍽️', dreck:'🍽️💧'
+  };
+  // Kurzes Bild für einen Gegenstand: fertiges Gericht, Zutaten auf dem Teller, Anzahl Teller
+  function dingText(it, gericht) {
+    if (!it) return '';
+    if (it.z === 'teller') {
+      if (!it.auf || !it.auf.length) return '🍽️';
+      if (gericht) return BILD[gericht] + '✓';
+      return '🍽️' + it.auf.map(z => (DING_BILD[z] || '').replace('🔪', '').replace('🔥', '')).join('');
+    }
+    if (it.z === 'stapel' || it.z === 'dreck') return DING_BILD[it.z] + '×' + (it.n || 1);
+    return DING_BILD[it.z] || '❔';
+  }
+  function schild(text, hell) {
+    return textSprite(text, { gr:44, grund:hell ? 'rgba(255,248,238,.94)' : 'rgba(43,29,22,.8)', farbe:hell ? '#2b1d16' : '#fff', rand:7, hoehe:0.42 });
+  }
   const blasenCache = new Map();
   function blase(gericht) {
     if (!blasenCache.has(gericht)) {
@@ -197,13 +216,29 @@
     }
     return g;
   }
-  function tellerModell(farbe = 0xffffff) {
+  // Teller mit blauem Rand, damit er sich von Theke und Tisch abhebt
+  const TELLER_RAND = 0x2f6fc4;
+  function tellerScheibe(farbe, y) {
     const g = new T.Group();
-    g.add(zyl(0.23, 0.18, 0.035, farbe, 0, 0.018, 0, 18));
+    g.add(zyl(0.23, 0.18, 0.035, farbe, 0, y, 0, 18));
+    const r = teil(geo('TorusGeometry', 0.215, 0.018, 6, 24), TELLER_RAND, 0, y + 0.017, 0);
+    r.rotation.x = Math.PI / 2; r.castShadow = false;
+    g.add(r);
     return g;
   }
-  // Gegenstand aus der Sicht (z, auf, n) als Modell
+  function tellerModell(farbe = 0xffffff) {
+    const g = new T.Group();
+    g.add(tellerScheibe(farbe, 0.018));
+    return g;
+  }
+  // Gegenstand aus der Sicht (z, auf, n) als Modell – etwas größer als echt, damit man ihn von oben gut sieht
+  const DING_GROESSE = 1.3;
   function ding(it) {
+    const g = dingRoh(it);
+    g.scale.setScalar(DING_GROESSE);
+    return g;
+  }
+  function dingRoh(it) {
     if (it.z === 'teller') {
       const g = tellerModell();
       const auf = it.auf || [];
@@ -229,8 +264,7 @@
       const g = new T.Group();
       const n = Math.min(it.n || 1, 10);
       for (let i = 0; i < n; i++) {
-        const t = zyl(0.23, 0.18, 0.035, it.z === 'dreck' ? 0xe8e2d6 : 0xffffff, 0, 0.018 + i * 0.04, 0, 18);
-        g.add(t);
+        g.add(tellerScheibe(it.z === 'dreck' ? 0xd9cfbd : 0xffffff, 0.018 + i * 0.04));
         if (it.z === 'dreck') { const f = zyl(0.1, 0.1, 0.005, 0x8a6a3a, (i % 2 ? 0.05 : -0.04), 0.038 + i * 0.04, 0.03, 8); f.castShadow = false; g.add(f); }
       }
       return g;
@@ -240,7 +274,7 @@
   const dingSchluessel = it => it ? it.z + (it.auf ? ':' + it.auf.slice().sort().join('+') : '') + (it.n ? '#' + it.n : '') : '';
 
   /* ---------- Geräte ---------- */
-  function sockel(g, farbe, deckel = 0xe9ecef) {
+  function sockel(g, farbe, deckel = 0x8e99a4) {
     g.add(box(0.94, 0.86, 0.94, farbe, 0, 0.43, 0));
     g.add(box(1, 0.06, 1, deckel, 0, 0.89, 0));
   }
@@ -249,9 +283,9 @@
     const inhalt = new T.Group(); inhalt.position.y = 0.92;   // Ablage für Gegenstände
     let anim = null;
     switch (o.t) {
-      case 'theke': sockel(g, 0xd9c6a5); g.add(box(0.94, 0.04, 0.02, 0xb59d78, 0, 0.6, 0.471)); break;
+      case 'theke': sockel(g, 0xc9ae86); g.add(box(0.94, 0.04, 0.02, 0xb59d78, 0, 0.6, 0.471)); break;
       case 'brett':
-        sockel(g, 0xd9c6a5);
+        sockel(g, 0xc9ae86);
         g.add(box(0.66, 0.04, 0.5, 0xc8915a, 0, 0.94, 0));
         g.add(box(0.05, 0.015, 0.28, 0xd8dde3, 0.38, 0.93, 0.05));
         g.add(box(0.06, 0.03, 0.12, 0x3a2a20, 0.38, 0.935, -0.14));
@@ -333,7 +367,7 @@
         break;
       case 'tisch': {
         g.add(box(0.96, 0.07, 0.96, 0xb07a45, 0, 0.72, 0));
-        g.add(box(0.98, 0.012, 0.98, 0xf4efe6, 0, 0.762, 0));
+        g.add(box(0.98, 0.012, 0.98, 0xe9d2ae, 0, 0.762, 0));
         for (const [x, z] of [[-0.4, -0.4], [0.4, -0.4], [-0.4, 0.4], [0.4, 0.4]]) g.add(box(0.06, 0.7, 0.06, 0x8a5a30, x, 0.35, z));
         // Stühle an den vier Seiten
         for (const [x, z] of [[-0.74, 0], [0.74, 0], [0, -0.74], [0, 0.74]]) {
@@ -470,11 +504,11 @@
   function markierung() {
     const g = new T.Group();
     const m = new T.MeshBasicMaterial({ color:0xffffff, transparent:true, opacity:0.9, depthTest:false });
-    for (const [w, d, x, z] of [[1, 0.06, 0, -0.5], [1, 0.06, 0, 0.5], [0.06, 1, -0.5, 0], [0.06, 1, 0.5, 0]]) {
+    for (const [w, d, x, z] of [[1.04, 0.1, 0, -0.5], [1.04, 0.1, 0, 0.5], [0.1, 1.04, -0.5, 0], [0.1, 1.04, 0.5, 0]]) {
       const b = new T.Mesh(geo('BoxGeometry', w, 0.02, d), m); b.position.set(x, 0, z); b.renderOrder = 5; g.add(b);
     }
     return g;
   }
 
-  window.LKM = { raum, geraet, ding, dingSchluessel, zutat, koch, gast, tier, balken, textSprite, blase, markierung, DREH, BILD, ARTEN };
+  window.LKM = { raum, geraet, ding, dingSchluessel, zutat, koch, gast, tier, balken, textSprite, blase, markierung, schild, dingText, DREH, BILD, DING_BILD, ARTEN };
 })();

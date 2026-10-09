@@ -139,6 +139,8 @@
   #hudPause{pointer-events:auto;margin-left:auto;padding:6px 14px}
   #meldung{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:2.6rem;font-weight:800;color:#fff;text-shadow:0 3px 0 #8f3218,0 0 20px rgba(0,0,0,.5);transition:opacity .4s;opacity:0;white-space:nowrap}
   #meldung small{display:block;font-size:1.1rem;text-shadow:0 2px 6px rgba(0,0,0,.6)}
+  #tipp{position:absolute;bottom:calc(58px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(255,248,238,.95);color:var(--text);border:2px solid var(--akzent2);border-radius:12px;padding:5px 14px;font-size:1rem;max-width:min(90vw,560px);text-align:center;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+  @media (pointer:coarse){#tipp{bottom:auto;top:calc(64px + env(safe-area-inset-top));max-width:calc(100vw - 32px)}}
   #hinweis{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(43,29,22,.85);color:#fff;border-radius:12px;padding:6px 14px;font-size:1rem;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
   #nacht{position:absolute;right:8px;top:70px;width:300px;max-height:calc(100% - 90px);overflow:auto;pointer-events:auto;background:rgba(255,248,238,.96);border-radius:16px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
   #nacht h3{margin:0 0 4px}
@@ -228,6 +230,7 @@
   </div>
   <div id="meldung"></div>
   <div id="hinweis"></div>
+  <div id="tipp" hidden></div>
   <div id="nacht" hidden>
     <button id="nachtZu" class="zwei">–</button>
     <h3 id="nachtTitel">Vor Tag 1</h3>

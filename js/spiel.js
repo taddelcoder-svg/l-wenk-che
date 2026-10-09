@@ -97,9 +97,20 @@
     for (const t of ansicht.texte) szene.remove(t.s);
     ansicht.geraete.clear(); ansicht.koeche.clear(); ansicht.gaeste.clear(); ansicht.texte = [];
   }
-  function kinderLeeren(g) { while (g.children.length) g.remove(g.children[0]); }
+  function kinderLeeren(g) {
+    // Schilder haben je eine eigene Textur – die freigeben, alles andere ist geteilt
+    g.traverse(c => { if (c.isSprite && c.userData.eigen) { c.material.map.dispose(); c.material.dispose(); } });
+    while (g.children.length) g.remove(g.children[0]);
+  }
+  function schildDazu(ziel, text, y, hell) {
+    if (!text) return;
+    const sp = LKM.schild(text, hell);
+    sp.userData.eigen = true;
+    sp.position.y = y;
+    ziel.add(sp);
+  }
 
-  function inhaltSchluessel(o) { return [LKM.dingSchluessel(o.it), o.n, o.d, o.sb].join('|'); }
+  function inhaltSchluessel(o) { return [LKM.dingSchluessel(o.it), o.n, o.d, o.sb, o.z].join('|'); }
   function inhaltBauen(e, o) {
     const ziel = e.grp.inhalt;
     kinderLeeren(ziel);
@@ -110,6 +121,14 @@
       if (o.sb > 0) { const m = LKM.ding({ z:'stapel', n:Math.min(o.sb, 8) }); m.position.x = 0.28; m.position.z = 0.2; ziel.add(m); }
     }
     if (o.t === 'tisch' && o.d > 0) ziel.add(LKM.ding({ z:'dreck', n:Math.min(o.d, 8) }));
+    // Schild darüber: was liegt hier? (von oben sind kleine Dinge sonst schwer zu erkennen)
+    let text = '';
+    if (o.it) text = LKM.dingText(o.it, o.it.z === 'teller' && o.it.auf ? LK.gerichtAus(o.it.auf) : null);
+    else if (o.t === 'tellerregal') text = '🍽️×' + (o.n || 0);
+    else if (o.t === 'kiste') text = LKM.DING_BILD[o.z] || '';
+    else if ((o.t === 'spuele' || o.t === 'spuelmaschine') && (o.d > 0 || o.sb > 0)) text = (o.d > 0 ? '💧' + o.d : '') + (o.sb > 0 ? ' ✨' + o.sb : '');
+    else if (o.t === 'tisch' && o.d > 0) text = '🍽️💧' + o.d;
+    schildDazu(ziel, text.trim(), o.t === 'kiste' ? 0.15 : 0.55, o.t === 'kiste' || o.t === 'tellerregal');
   }
 
   function geraeteAbgleichen(s) {
@@ -160,7 +179,16 @@
       }
       e.p = p;
       const hk = LKM.dingSchluessel(p.h);
-      if (hk !== e.hKey) { e.hKey = hk; kinderLeeren(e.grp.hand); if (p.h) e.grp.hand.add(LKM.ding(p.h)); }
+      if (hk !== e.hKey) {
+        e.hKey = hk; kinderLeeren(e.grp.hand);
+        if (e.handSchild) { e.grp.remove(e.handSchild); e.handSchild.material.map.dispose(); e.handSchild.material.dispose(); e.handSchild = null; }
+        if (p.h) {
+          e.grp.hand.add(LKM.ding(p.h));
+          e.handSchild = LKM.schild(LKM.dingText(p.h, p.h.z === 'teller' && p.h.auf ? LK.gerichtAus(p.h.auf) : null), true);
+          e.handSchild.position.y = 1.98;
+          e.grp.add(e.handSchild);
+        }
+      }
       const tk = p.tr ? p.tr.t + (p.tr.z || '') : '';
       if (tk !== e.trKey) {
         e.trKey = tk;
@@ -259,10 +287,10 @@
     // Zielmarkierung der eigenen Figur
     markierung.visible = false;
     if (ich.da && sicht && sicht.ph !== 'ende' && modus !== 'menue') {
-      const [tx, ty] = LK.zielKachel(ich.x, ich.y, ich.r);
-      const o = sicht.g.find(g => g.x === tx && g.y === ty);
       const meiner = sicht.s.find(p => p.i === meineId);
-      if (o) { markierung.visible = true; markierung.position.set(tx + 0.5, (HOEHE[o.t] || 0.9) + 0.02, ty + 0.5); markierung.children.forEach(c => c.material.color.setHex(0xffffff)); }
+      const [tx, ty] = meiner && meiner.tr ? LK.zielKachel(ich.x, ich.y, ich.r) : LK.zielKachel(ich.x, ich.y, ich.r, (x, y) => belegt.has(x + ',' + y));
+      const o = sicht.g.find(g => g.x === tx && g.y === ty);
+      if (o) { markierung.visible = true; markierung.position.set(tx + 0.5, (HOEHE[o.t] || 0.9) + 0.02, ty + 0.5); markierung.children.forEach(c => c.material.color.setHex(0xffd23f)); }
       else if (sicht.ph === 'nacht' && meiner && meiner.tr) {
         markierung.visible = true; markierung.position.set(tx + 0.5, 0.03, ty + 0.5);
         const ok = LK.innen(tx, ty) && !(tx === TUER_X && ty === H - 2);
@@ -371,8 +399,61 @@
     } else if (schirm === 'karten') { kartenGezeigt = null; zeige(null); }
     // Ende
     if (s.ph === 'ende' && !endeGezeigt) { endeGezeigt = true; setTimeout(endeZeigen, 1200); }
+    tippAktualisieren();
     $('#tArbeitText').textContent = s.ph === 'nacht' ? 'Drehen' : 'Arbeit';
   }
+  // Kleiner Tipp unten: was mache ich mit dem, was ich in der Hand habe (oder mit dem, worauf ich schaue)?
+  function tippText() {
+    const s = sicht;
+    if (!s || s.ph !== 'tag' || !ich.da) return '';
+    const me = s.s.find(p => p.i === meineId);
+    if (!me) return '';
+    const [tx, ty] = LK.zielKachel(ich.x, ich.y, ich.r, (x, y) => belegt.has(x + ',' + y));
+    const ziel = s.g.find(g => g.x === tx && g.y === ty);
+    const arbeit = touchAn ? '🔪 gedrückt halten' : 'F / Shift gedrückt halten';
+    const h = me.h;
+    const hat = t => s.g.some(g => g.t === t);
+    if (!h) {
+      if (ziel && ziel.t === 'brett' && ziel.it && LK.SCHNEIDEN[ziel.it.z]) return `Schneiden: ${arbeit}`;
+      if (ziel && ziel.t === 'spuele' && ziel.d > 0) return `Spülen: ${arbeit}`;
+      return '';
+    }
+    const name = z => LK.DINGE[z].n;
+    if (h.z === 'teller') {
+      const auf = h.auf || [];
+      if (!auf.length) return 'Leerer Teller: an eine Zutat halten oder Zutat darauflegen';
+      const g = LK.gerichtAus(auf);
+      if (g && s.menu.includes(g)) {
+        return `${LKM.BILD[g]} ${LK.GERICHTE[g].n} fertig – zum Tisch bringen, der es bestellt hat`;
+      }
+      const ziele = s.menu.map(m => LK.GERICHTE[m]).filter(G => auf.every(z => G.teile.includes(z)));
+      if (ziele.length) {
+        const fehlt = ziele[0].teile.filter(z => !auf.includes(z));
+        return `Für ${ziele[0].n} fehlt noch: ${fehlt.map(name).join(', ')}`;
+      }
+      return 'Das passt zu keinem Gericht – Teller in den Müll leeren';
+    }
+    if (h.z === 'dreck') return hat('spuele') || hat('spuelmaschine') ? 'Schmutzige Teller in die Spüle legen, dann spülen' : 'Du brauchst eine Spüle';
+    if (h.z === 'stapel') return 'Saubere Teller ins Tellerregal stellen';
+    if (h.z === 'verbrannt') return 'Verbrannt – ab in den Müll 🗑️';
+    if (LK.SCHNEIDEN[h.z]) return `${name(h.z)}: aufs Schneidebrett legen, dann ${arbeit}`;
+    for (const t in LK.KOCHEN) if (LK.KOCHEN[t][h.z] && LK.KOCHEN[t][h.z][0] !== 'verbrannt') {
+      const fuer = s.menu.some(m => LK.GERICHTE[m].teile.includes(h.z));
+      if (!fuer || hat(t)) return `${name(h.z)}: auf ${t === 'herd' ? 'den Herd 🍳' : t === 'ofen' ? 'den Ofen' : 'die Fritteuse 🍟'} legen und warten`;
+    }
+    if (LK.KOMBI.some(([a, b]) => a === h.z || b === h.z) && !s.menu.some(m => LK.GERICHTE[m].teile.includes(h.z))) return `${name(h.z)}: auf einer Theke mit den anderen Pizza-Zutaten zusammenlegen`;
+    if (s.menu.some(m => LK.GERICHTE[m].teile.includes(h.z))) return `${name(h.z)}: auf einen Teller legen`;
+    return '';
+  }
+  let tippVorher = '';
+  function tippAktualisieren() {
+    const t = modus === 'menue' || schirm ? '' : tippText();
+    if (t === tippVorher) return;
+    tippVorher = t;
+    $('#tipp').textContent = t;
+    $('#tipp').hidden = !t;
+  }
+
   $('#bereitKnopf').onclick = () => { Ton.klick(); befehl({ t:'bereit', v:!(sicht && sicht.be.includes(meineId)) }); };
   $('#tellerKnopf').onclick = () => { Ton.klick(); befehl({ t:'teller' }); };
   $('#wuerfelKnopf').onclick = () => { Ton.klick(); befehl({ t:'wuerfeln' }); };
@@ -798,7 +879,7 @@
   function frei(tx, ty) { return LK.innen(tx, ty) && !belegt.has(tx + ',' + ty); }
   function schleife(jetzt) {
     requestAnimationFrame(schleife);
-    const dt = Math.min(0.05, (jetzt - letzt) / 1000);
+    const dt = Math.min(0.1, (jetzt - letzt) / 1000);
     letzt = jetzt;
     bild(dt, jetzt);
   }
@@ -808,7 +889,7 @@
     if (modus === 'solo' && solo && !solo.pausiert) {
       solo.acc += dt;
       let n = 0;
-      while (solo.acc >= LK.DT && n < 5) { solo.spiel.schritt(); solo.acc -= LK.DT; n++; }
+      while (solo.acc >= LK.DT && n < 8) { solo.spiel.schritt(); solo.acc -= LK.DT; n++; }
       if (n) sichtNeu(solo.spiel.sicht());
     }
     // Eigene Figur sofort bewegen und melden
@@ -819,6 +900,7 @@
       else if (jetzt - netz.letztP > 50) { netz.letztP = jetzt; senden({ t:'p', x:+ich.x.toFixed(3), y:+ich.y.toFixed(3), r:+ich.r.toFixed(3), w:ich.w }); }
     } else ich.w = false;
     ansichtBewegen(dt, jetzt / 1000);
+    tippAktualisieren();
     if (sicht && sicht.ph === 'tag' && modus !== 'menue') {
       // Uhr flüssig weiterlaufen lassen
       $('#hudUhr').style.width = (sicht.dauer ? (1 - sicht.zeit / sicht.dauer) * 100 : 0) + '%';

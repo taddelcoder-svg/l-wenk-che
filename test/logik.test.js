@@ -86,7 +86,7 @@ test('Burger: Hack braten, Patty verbrennt, wenn man es liegen lässt', () => {
 test('Pizza aus Teig, Tomate und Käse', () => {
   const sp = new LK.Spiel({ seed:1, modus:'rush', menu:['pizza'] });
   const s = sp.spielerHinzu('a', 'A');
-  const theke = [...sp.geraete.values()].find(g => g.t === 'theke' && g.y === 3);
+  const theke = [...sp.geraete.values()].find(g => g.t === 'theke' && g.y === 4);
   const brett = finde(sp, 'brett'), ofen = finde(sp, 'ofen');
   greife(sp, s, finde(sp, 'kiste', 'teig')); greife(sp, s, theke);
   greife(sp, s, finde(sp, 'kiste', 'tomate')); greife(sp, s, brett); arbeite(sp, s, brett, 1.3); greife(sp, s, brett); greife(sp, s, theke);
@@ -195,4 +195,24 @@ test('Sicht ist JSON-tauglich und klein', () => {
   laufen(sp, 40);
   const text = JSON.stringify(sp.sicht());
   assert.ok(text.length < 12000, 'Sicht zu groß: ' + text.length);
+});
+
+test('Greifen klappt auch seitlich an der Theke entlang', () => {
+  const sp = new LK.Spiel({ seed:2, start:'salat' });
+  const s = sp.spielerHinzu('a', 'A');
+  sp.befehl('a', { t:'bereit' });
+  const kiste = finde(sp, 'kiste', 'salat');
+  // Unter der Kiste stehen, aber nach links schauen (ins Leere den Gang entlang)
+  s.x = kiste.x + 0.5; s.y = kiste.y + 1.35; s.r = Math.PI;
+  sp.befehl('a', { t:'g' });
+  assert.strictEqual(s.h && s.h.z, 'salat');
+  // Mit dem Rücken zur Theke greift man nicht
+  const brett = finde(sp, 'brett');
+  s.x = brett.x + 0.5; s.y = brett.y + 1.35; s.r = Math.PI / 2;
+  sp.befehl('a', { t:'g' });
+  assert.strictEqual(s.h && s.h.z, 'salat');
+  s.r = 0;
+  sp.befehl('a', { t:'g' });
+  assert.strictEqual(s.h, null);
+  assert.strictEqual(brett.it.z, 'salat');
 });
