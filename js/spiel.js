@@ -351,7 +351,7 @@
       const schl = an.map(a => a.t + a.weg + (s.m >= a.preis)).join() + s.m;
       if (schl !== $('#laden').dataset.s) {
         $('#laden').dataset.s = schl;
-        $('#laden').innerHTML = an.map((a, i) => `<button data-kauf="${i}" class="${a.weg ? 'weg' : ''}" ${a.weg || s.m < a.preis ? 'disabled' : ''}><span class="ico">${ladenBild[a.t] || '📦'}</span>${esc(LK.GERAETE[a.t].n)}<br>${a.weg ? 'gekauft' : a.preis + ' 🪙'}</button>`).join('');
+        $('#laden').innerHTML = an.map((a, i) => `<button data-kauf="${i}" class="${a.weg ? 'weg' : ''}" ${a.weg || s.m < a.preis ? 'disabled' : ''}><span class="ico">${ladenBild[a.t] || '📦'}</span>${esc(LK.GERAETE[a.t].n)}<br><span class="preis">${a.weg ? 'gekauft' : a.preis + ' 🪙'}</span></button>`).join('');
         for (const b of $$('#laden [data-kauf]')) b.onclick = () => { Ton.klick(); befehl({ t:'kaufen', i:Number(b.dataset.kauf) }); };
       }
       $('#tellerKnopf').textContent = `+${LK.TELLER_PAKET} Teller · ${LK.TELLER_PREIS} 🪙`;
