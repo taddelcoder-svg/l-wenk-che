@@ -68,149 +68,225 @@
 <title>Löwenküche</title>
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
 <style>
-  @font-face{font-family:"Barlow Semi Condensed";font-weight:600;src:url(/vendor/barlow-semi-condensed-600.woff2) format("woff2");font-display:swap}
-  @font-face{font-family:"Barlow Semi Condensed";font-weight:700;src:url(/vendor/barlow-semi-condensed-700.woff2) format("woff2");font-display:swap}
-  @font-face{font-family:"Barlow Semi Condensed";font-weight:800;src:url(/vendor/barlow-semi-condensed-800.woff2) format("woff2");font-display:swap}
+  @font-face{font-family:"Bricolage Grotesque";font-weight:200 800;src:url(/vendor/bricolage-grotesque.woff2) format("woff2");font-display:swap}
   :root{
-    --bg:#2b1d16;--karte:#fff8ee;--karte2:#f3e6d2;--text:#2b1d16;--leise:#6d5a4c;--akzent:#c8502e;--akzent2:#e98a2b;
-    --gut:#3f9b4f;--schlecht:#c0392b;--rand:#e2cfb4;--gold:#e0a82e;
-    --schrift:"Barlow Semi Condensed",system-ui,-apple-system,"Segoe UI",sans-serif;
+    /* Farb-Tokens: warme Küche, Löwen-Orange als Akzent */
+    --bg:#2b1d16;--flaeche:#2b1d16;--karte:#fff8ee;--karte2:#f3e6d2;--text:#2b1d16;--leise:#6d5a4c;
+    --akzent:#b8431f;--akzent2:#e98a2b;--gut:#2f7d3e;--schlecht:#b3261e;--warnung:#e0a82e;
+    --rand:#e2cfb4;--gold:#e0a82e;
+    --glas:rgba(43,29,22,.74);--glas-rand:rgba(255,248,238,.18);--glas-text:#fff8ee;
+    --schatten:0 1px 2px rgba(43,29,22,.18),0 6px 16px rgba(43,29,22,.22),0 20px 48px rgba(0,0,0,.28);
+    --r:18px;
+    --schrift:"Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:600 17px/1.4 var(--schrift);overscroll-behavior:none}
+  html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font:500 16px/1.45 var(--schrift);overscroll-behavior:none}
   /* iPad/iPhone: kein Markieren, keine Lupe beim langen Drücken, kein Doppeltipp-Zoom */
   body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-text-size-adjust:100%}
   input{-webkit-user-select:text;user-select:text}
   button,a,.tKnopf{touch-action:manipulation}
   canvas#bild{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
-  button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 16px;background:var(--akzent);color:#fff;font-weight:800;letter-spacing:.02em;box-shadow:0 3px 0 #8f3218}
-  button:active{transform:translateY(2px);box-shadow:0 1px 0 #8f3218}
-  button.zwei{background:var(--karte2);color:var(--text);box-shadow:0 3px 0 #c9b08c}
-  button:disabled{opacity:.45;cursor:default;transform:none}
-  button:focus-visible,input:focus-visible{outline:3px solid var(--akzent2);outline-offset:2px}
-  input{font:inherit;padding:10px 12px;border-radius:10px;border:2px solid var(--rand);background:#fff;color:var(--text);width:100%}
-  a{color:var(--akzent)}
+  .statistik b,.code{font-variant-numeric:tabular-nums}
+
+  /* Knöpfe: Primär (Standard), Sekundär (.zwei), Gefahr (.gefahr) */
+  button{font:inherit;cursor:pointer;border:1px solid rgba(0,0,0,.18);border-radius:14px;padding:10px 18px;min-height:44px;
+    background:linear-gradient(180deg,#cf5530,var(--akzent));color:#fff;font-weight:700;letter-spacing:.01em;
+    box-shadow:0 3px 0 #7d2c12,0 6px 14px rgba(125,44,18,.28);transition:transform .08s,box-shadow .08s,filter .15s}
+  button:hover:not(:disabled){filter:brightness(1.07)}
+  button:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 #7d2c12,0 2px 6px rgba(125,44,18,.25)}
+  button.zwei{background:linear-gradient(180deg,#fffaf2,var(--karte2));color:var(--text);border-color:var(--rand);box-shadow:0 3px 0 #c9b08c,0 6px 12px rgba(43,29,22,.12)}
+  button.zwei:active:not(:disabled){box-shadow:0 1px 0 #c9b08c}
+  button.gefahr{background:linear-gradient(180deg,#fff,#fbe7e4);color:var(--schlecht);border-color:#e7b9b4;box-shadow:0 3px 0 #d79d97,0 6px 12px rgba(43,29,22,.1)}
+  button.gefahr:active:not(:disabled){box-shadow:0 1px 0 #d79d97}
+  button:disabled{opacity:.5;cursor:default;filter:saturate(.6)}
+  button:focus-visible,input:focus-visible,a:focus-visible{outline:3px solid #1c6dd0;outline-offset:2px}
+  input{font:inherit;font-weight:600;padding:10px 14px;min-height:44px;border-radius:12px;border:1.5px solid var(--rand);background:#fff;color:var(--text);width:100%;box-shadow:inset 0 1px 2px rgba(43,29,22,.08)}
+  input::placeholder{color:#8a7766}
+  input:focus{border-color:var(--akzent2)}
+  a{color:var(--akzent);font-weight:600}
   [hidden]{display:none!important}
   .leise{color:var(--leise)}
 
   /* Bildschirme (Menüs) */
-  .schirm{position:fixed;inset:0;display:grid;place-items:center;padding:16px;overflow:auto;z-index:20;background:radial-gradient(ellipse at center,rgba(43,29,22,.25),rgba(43,29,22,.7))}
-  .karte{background:var(--karte);border-radius:20px;padding:22px;width:100%;max-width:480px;box-shadow:0 10px 40px rgba(0,0,0,.35);border:3px solid var(--rand)}
+  .schirm{position:fixed;inset:0;display:grid;place-items:center;padding:calc(16px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));overflow:auto;z-index:20;
+    background:radial-gradient(ellipse at 50% 30%,rgba(43,29,22,.18),rgba(43,29,22,.78))}
+  .karte{background:linear-gradient(180deg,#fffaf2,var(--karte));border-radius:20px;padding:24px;width:100%;max-width:460px;border:1px solid rgba(226,207,180,.9);
+    box-shadow:var(--schatten),inset 0 1px 0 #fff;margin:auto;animation:rein .24s ease-out both}
   .karte.breit{max-width:720px}
-  h1{font-size:2.6rem;line-height:1;margin:0 0 4px;font-weight:800;color:var(--akzent)}
-  h2{font-size:1.6rem;margin:0 0 8px;font-weight:800}
-  h3{font-size:1.15rem;margin:16px 0 6px;font-weight:800}
-  p{margin:0 0 10px}
-  .reihe{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  @keyframes rein{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:none}}
+  h1{font-size:2.7rem;line-height:1;margin:0 0 8px;font-weight:800;letter-spacing:-.03em;color:var(--akzent)}
+  h2{font-size:1.6rem;line-height:1.15;margin:0 0 8px;font-weight:800;letter-spacing:-.02em}
+  h3{font-size:1.1rem;margin:16px 0 8px;font-weight:700}
+  p{margin:0 0 12px}
+  .karte b{font-weight:700}
+  .reihe{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
   .reihe>*{flex:1 1 auto}
-  .stapel{display:grid;gap:10px}
-  .tiere{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin:8px 0 14px}
-  .tiere button{font-size:1.9rem;padding:6px 0;background:var(--karte2);box-shadow:0 3px 0 #c9b08c;color:var(--text)}
-  .tiere button[aria-pressed="true"]{background:var(--akzent2);box-shadow:0 3px 0 #a3561a}
-  .tiere small{display:block;font-size:.72rem;font-weight:700}
-  .gerichte{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin:8px 0}
-  .gerichte button{background:var(--karte2);color:var(--text);box-shadow:0 3px 0 #c9b08c;padding:10px 6px;font-size:1rem}
-  .gerichte button .ico{display:block;font-size:2rem}
-  .gerichte button[aria-pressed="true"]{background:var(--akzent2);color:#fff;box-shadow:0 3px 0 #a3561a}
-  .gerichte button small{display:block;font-weight:600;font-size:.78rem;opacity:.85}
-  .fehler{color:var(--schlecht);min-height:1.4em;margin:6px 0 0}
-  .code{font-size:2.6rem;font-weight:800;letter-spacing:.18em;text-align:center;background:var(--karte2);border-radius:14px;padding:6px}
-  ul.leute{list-style:none;padding:0;margin:8px 0;display:grid;gap:6px}
-  ul.leute li{background:var(--karte2);border-radius:10px;padding:8px 12px;display:flex;gap:8px;align-items:center}
+  .stapel{display:grid;gap:12px}
+  .tiere{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:8px 0 16px}
+  .tiere button{font-size:1.8rem;line-height:1.1;padding:6px 0;min-height:64px;background:var(--karte2);color:var(--text);border:1.5px solid var(--rand);box-shadow:0 2px 0 #c9b08c}
+  .tiere button[aria-pressed="true"]{background:linear-gradient(180deg,#f5a64a,var(--akzent2));border-color:#b8661a;box-shadow:0 2px 0 #a3561a,0 0 0 3px rgba(233,138,43,.35)}
+  .tiere small{display:block;font-size:.7rem;font-weight:700}
+  .gerichte{display:grid;grid-template-columns:repeat(auto-fill,minmax(124px,1fr));gap:8px;margin:8px 0}
+  .gerichte button{background:var(--karte2);color:var(--text);border:1.5px solid var(--rand);box-shadow:0 3px 0 #c9b08c;padding:12px 6px;font-size:1rem;font-weight:700}
+  .gerichte button .ico{display:block;font-size:2rem;line-height:1.2}
+  .gerichte button[aria-pressed="true"]{background:linear-gradient(180deg,#f5a64a,var(--akzent2));color:#2b1d16;border-color:#b8661a;box-shadow:0 3px 0 #a3561a,0 0 0 3px rgba(233,138,43,.35)}
+  .gerichte button small{display:block;font-weight:500;font-size:.78rem;opacity:.9}
+  .fehler{color:var(--schlecht);min-height:1.4em;margin:8px 0 0;font-weight:600}
+  .code{font-size:2.6rem;font-weight:800;letter-spacing:.2em;text-indent:.2em;text-align:center;background:var(--karte2);border:1.5px dashed #c9b08c;border-radius:16px;padding:8px;color:var(--akzent)}
+  ul.leute{list-style:none;padding:0;margin:12px 0;display:grid;gap:8px}
+  ul.leute li{background:var(--karte2);border:1px solid var(--rand);border-radius:12px;padding:10px 14px;display:flex;gap:8px;align-items:center;font-weight:700}
   ul.leute li.weg{opacity:.5}
-  ul.leute small{margin-left:auto;color:var(--leise)}
-  .titelbild{font-size:3.2rem;line-height:1;margin-bottom:4px}
-  .fuss{margin-top:14px;font-size:.9rem;text-align:center}
-  .statistik{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
-  .statistik div{background:var(--karte2);border-radius:12px;padding:8px;text-align:center}
-  .statistik b{display:block;font-size:1.5rem}
-  .hilfe li{margin-bottom:6px}
-  kbd{background:var(--karte2);border:1px solid var(--rand);border-radius:6px;padding:0 6px;font:inherit;font-size:.9em}
+  ul.leute small{margin-left:auto;color:var(--leise);font-weight:600}
+  .titelbild{font-size:3.2rem;line-height:1;margin-bottom:8px}
+  .fuss{margin-top:16px;font-size:.9rem;text-align:center;color:var(--leise)}
+  .fuss a{display:inline-block;padding:6px 2px;font-weight:600}
+  .statistik{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:12px 0}
+  .statistik div{background:var(--karte2);border:1px solid var(--rand);border-radius:14px;padding:10px 4px;text-align:center;font-size:.82rem;color:var(--leise);font-weight:600}
+  .statistik b{display:block;font-size:1.6rem;line-height:1.15;color:var(--text);font-weight:800}
+  .hilfe li{margin-bottom:8px}
+  .hilfe ul{padding-left:20px}
+  kbd{background:#fff;border:1px solid var(--rand);border-bottom-width:2px;border-radius:6px;padding:0 6px;font:inherit;font-size:.88em;font-weight:700}
+  /* Startmenü: Hauptaktion groß */
+  #soloKnopf{font-size:1.2rem;min-height:56px;border-radius:16px}
+  #start .karte{text-align:center}
+  #start .karte label,#start .karte input,#start .tiere,#start .stapel{text-align:left}
+  #start .tiere{text-align:center}
+  #start .titelbild{font-size:3.4rem;filter:drop-shadow(0 4px 6px rgba(43,29,22,.25))}
+  #start .titelbild,#ende .titelbild{display:inline-block}
+  #endeBild{font-size:4rem;animation:huepf .9s .15s ease-out both}
+  @keyframes huepf{0%{transform:scale(.4);opacity:0}60%{transform:scale(1.18);opacity:1}100%{transform:scale(1)}}
+  #ende .karte{text-align:center;position:relative;overflow:hidden}
+  #endeRang{text-align:left;margin:8px 0;padding-left:24px}
+  #endeRang li{margin-bottom:4px}
+  #endeFreischalt{font-weight:600}
+  #ende .reihe{margin-top:12px}
+  #ende .reihe>*{flex:1 1 130px}
+  #ende .reihe a button{width:100%}
+  .konfetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+  .konfetti i{position:absolute;top:-14px;width:8px;height:14px;border-radius:2px;opacity:0;animation:fall 2.8s ease-in forwards}
+  .konfetti i:nth-child(1){left:6%;background:#e98a2b;animation-delay:.1s}
+  .konfetti i:nth-child(2){left:16%;background:#3f9b4f;animation-delay:.5s}
+  .konfetti i:nth-child(3){left:27%;background:#e0a82e;animation-delay:.25s}
+  .konfetti i:nth-child(4){left:38%;background:#c8502e;animation-delay:.7s}
+  .konfetti i:nth-child(5){left:49%;background:#f2c230;animation-delay:.05s}
+  .konfetti i:nth-child(6){left:60%;background:#3f9b4f;animation-delay:.45s}
+  .konfetti i:nth-child(7){left:71%;background:#e98a2b;animation-delay:.3s}
+  .konfetti i:nth-child(8){left:82%;background:#c8502e;animation-delay:.6s}
+  .konfetti i:nth-child(9){left:92%;background:#e0a82e;animation-delay:.2s}
+  @keyframes fall{0%{opacity:1;transform:translateY(0) rotate(0)}100%{opacity:0;transform:translateY(420px) rotate(520deg)}}
 
-  /* HUD */
-  #hud{position:fixed;inset:0;pointer-events:none;z-index:10}
-  .oben{position:absolute;top:calc(8px + env(safe-area-inset-top));left:8px;right:8px;display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
-  .kachel{background:rgba(255,248,238,.94);border-radius:14px;padding:6px 12px;box-shadow:0 3px 10px rgba(0,0,0,.25);display:flex;align-items:center;gap:8px;font-weight:800}
-  #hudTagKachel{flex-direction:column;align-items:stretch;min-width:150px;gap:3px}
-  .uhr{height:8px;border-radius:4px;background:#e2cfb4;overflow:hidden}
-  #hudUhr{height:100%;width:0;background:linear-gradient(90deg,#f2c230,#e98a2b)}
-  #hudMenu{font-size:1.4rem;letter-spacing:.05em}
-  #hudSterne{color:var(--gold);font-size:1.3rem;letter-spacing:.08em}
-  #hudPause{pointer-events:auto;margin-left:auto;padding:6px 14px}
-  #meldung{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:2.6rem;font-weight:800;color:#fff;text-shadow:0 3px 0 #8f3218,0 0 20px rgba(0,0,0,.5);transition:opacity .4s;opacity:0;white-space:nowrap}
-  #meldung small{display:block;font-size:1.1rem;text-shadow:0 2px 6px rgba(0,0,0,.6)}
-  #hinweis{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:rgba(43,29,22,.85);color:#fff;border-radius:12px;padding:6px 14px;font-size:1rem;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
-  #nacht{position:absolute;right:8px;top:70px;width:300px;max-height:calc(100% - 90px);overflow:auto;pointer-events:auto;background:rgba(255,248,238,.96);border-radius:16px;padding:12px;box-shadow:0 6px 20px rgba(0,0,0,.35)}
-  #nacht h3{margin:0 0 4px}
-  #nacht p{font-size:.92rem;color:var(--leise)}
-  #laden{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
-  #laden button{background:var(--karte2);color:var(--text);box-shadow:0 3px 0 #c9b08c;padding:8px 4px;font-size:.92rem;line-height:1.15}
-  #laden button .ico{display:block;font-size:1.5rem}
-  #laden button.weg{opacity:.35}
-  #nacht .reihe button{font-size:.9rem;padding:8px 8px}
-  #bereitKnopf{width:100%;margin-top:8px;font-size:1.15rem;background:var(--gut);box-shadow:0 3px 0 #2a6a35}
-  #bereitKnopf[aria-pressed="true"]{background:#888;box-shadow:0 3px 0 #555}
-  #bereitWer{font-size:.85rem;margin-top:4px;text-align:center}
-  #nachtZu{position:absolute;right:10px;top:10px;padding:3px 12px;font-size:.9rem}
+  /* HUD: Chips aus dunklem Glas, helle Schrift */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:10;font-variant-numeric:tabular-nums}
+  .oben{position:absolute;top:calc(8px + env(safe-area-inset-top));left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right));display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+  .kachel{background:var(--glas);color:var(--glas-text);border:1px solid var(--glas-rand);border-radius:14px;padding:6px 12px;min-height:40px;
+    box-shadow:0 2px 4px rgba(0,0,0,.2),0 6px 16px rgba(0,0,0,.22);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;gap:8px;font-weight:700}
+  #hudTagKachel{flex-direction:column;align-items:stretch;justify-content:center;min-width:160px;gap:5px}
+  #hudTag{font-size:.95rem;line-height:1.1}
+  .uhr{height:8px;border-radius:4px;background:rgba(255,248,238,.22);overflow:hidden}
+  #hudUhr{height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,#f2c230,#e98a2b 60%,#e2572b);transition:width .25s linear}
+  #hudMenu{font-size:1.3rem;letter-spacing:.05em;gap:6px}
+  #hudMenu:empty{display:none}
+  #hudMenu::before{content:"Karte";font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(255,248,238,.72)}
+  #hudMuenzen{font-size:1.15rem}
+  #hudSterne{color:#f6c84c;font-size:1.2rem;letter-spacing:.08em}
+  #hudPause{pointer-events:auto;margin-left:auto;width:44px;padding:0;border-radius:14px;background:var(--glas);color:var(--glas-text);border:1px solid var(--glas-rand);box-shadow:0 2px 4px rgba(0,0,0,.2),0 6px 16px rgba(0,0,0,.22);font-size:1.2rem}
+  #hudPause:active:not(:disabled){box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  #meldung{position:absolute;top:30%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:2.6rem;font-weight:800;letter-spacing:-.02em;color:#fff;text-shadow:0 3px 0 #7d2c12,0 0 24px rgba(0,0,0,.55);transition:opacity .4s;opacity:0;white-space:nowrap;max-width:96vw}
+  #meldung small{display:block;font-size:1.1rem;font-weight:600;letter-spacing:0;text-shadow:0 2px 6px rgba(0,0,0,.7)}
+  #hinweis{position:absolute;bottom:calc(14px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--glas);color:var(--glas-text);border:1px solid var(--glas-rand);border-radius:14px;padding:8px 16px;font-size:1rem;font-weight:600;opacity:0;transition:opacity .3s;max-width:90vw;text-align:center}
+
+  /* Nacht: Laden */
+  #nacht{position:absolute;right:calc(8px + env(safe-area-inset-right));top:calc(68px + env(safe-area-inset-top));width:320px;max-height:calc(100% - 90px);overflow:auto;pointer-events:auto;
+    background:linear-gradient(180deg,#fffaf2,var(--karte));border:1px solid var(--rand);border-radius:var(--r);padding:14px;box-shadow:var(--schatten);animation:rein .24s ease-out both}
+  #nacht h3{margin:0 0 6px;font-size:1.2rem;letter-spacing:-.01em;padding-right:56px}
+  #nacht p{font-size:.9rem;color:var(--leise)}
+  #laden{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  #laden button{background:#fff;color:var(--text);border:1.5px solid var(--rand);box-shadow:0 2px 0 #c9b08c;padding:8px 4px;font-size:.9rem;line-height:1.2;font-weight:700;min-height:84px}
+  #laden button .ico{display:block;font-size:1.6rem;line-height:1.2}
+  #laden button .preis{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:999px;background:var(--karte2);font-size:.82rem;font-weight:700;color:var(--text)}
+  #laden button:disabled:not(.weg) .preis{color:var(--schlecht);background:#fbe7e4}
+  #laden button.weg{opacity:.4}
+  #nacht .reihe{gap:8px}
+  #nacht .reihe button{font-size:.88rem;padding:8px;line-height:1.2}
+  #bereitKnopf{width:100%;margin-top:10px;font-size:1.15rem;min-height:50px;background:linear-gradient(180deg,#3d9a4f,var(--gut));box-shadow:0 3px 0 #1d5a2a,0 6px 14px rgba(29,90,42,.3)}
+  #bereitKnopf[aria-pressed="true"]{background:linear-gradient(180deg,#8a8178,#6d655d);box-shadow:0 3px 0 #4a443f}
+  #bereitWer{font-size:.85rem;margin-top:6px;text-align:center}
+  #nachtZu{position:absolute;right:12px;top:12px;padding:0 12px;min-height:36px;min-width:44px;font-size:.95rem}
   #nacht.zu #nachtInhalt{display:none}
-  #nacht.zu{width:220px}
-  #rangliste{position:absolute;right:8px;top:70px;width:220px;background:rgba(255,248,238,.94);border-radius:14px;padding:8px 12px;box-shadow:0 3px 10px rgba(0,0,0,.25)}
-  #rangliste ol{margin:4px 0 0;padding-left:22px}
-  #rangliste li.ich{color:var(--akzent)}
-  #karten .wahl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px}
-  #karten .wahl button{background:var(--karte2);color:var(--text);box-shadow:0 4px 0 #c9b08c;padding:16px 10px;text-align:center;border:3px solid var(--rand)}
-  #karten .wahl button .ico{font-size:3rem;display:block}
-  #karten .wahl button b{display:block;font-size:1.25rem}
-  #karten .wahl button small{display:block;font-weight:600;color:var(--leise);margin-top:4px}
+  #nacht.zu{width:230px}
+  #rangliste{position:absolute;right:calc(8px + env(safe-area-inset-right));top:calc(68px + env(safe-area-inset-top));width:230px;background:var(--glas);color:var(--glas-text);border:1px solid var(--glas-rand);border-radius:14px;padding:10px 14px;box-shadow:0 6px 16px rgba(0,0,0,.25);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  #rangliste ol{margin:6px 0 0;padding-left:22px}
+  #rangliste li.ich{color:#ffc27a;font-weight:700}
+  #karten .wahl{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+  #karten .wahl button{background:linear-gradient(180deg,#fff,var(--karte2));color:var(--text);box-shadow:0 4px 0 #c9b08c,0 8px 18px rgba(43,29,22,.12);padding:18px 14px;text-align:center;border:1.5px solid var(--rand);border-radius:18px}
+  #karten .wahl button:hover:not(:disabled){border-color:var(--akzent2)}
+  #karten .wahl button .ico{font-size:3rem;display:block;line-height:1.2}
+  #karten .wahl button b{display:block;font-size:1.25rem;letter-spacing:-.01em}
+  #karten .wahl button small{display:block;font-weight:500;color:var(--leise);margin-top:6px;font-size:.88rem;line-height:1.35}
 
   /* Touch */
   #touch{position:fixed;inset:0;z-index:9;touch-action:none;pointer-events:auto}
-  #tStick{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.18);border:3px solid rgba(255,255,255,.4);transform:translate(-50%,-50%);display:none}
-  #tKnauf{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.75)}
-  .tKnopf{position:absolute;width:84px;height:84px;border-radius:50%;background:rgba(200,80,46,.85);color:#fff;display:grid;place-items:center;font-size:1rem;font-weight:800;text-align:center;line-height:1.05;border:3px solid rgba(255,255,255,.6);user-select:none}
-  .tKnopf.an{background:rgba(233,138,43,.95)}
+  #tStick{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.16);border:2px solid rgba(255,255,255,.5);box-shadow:0 4px 16px rgba(0,0,0,.25);transform:translate(-50%,-50%);display:none}
+  #tKnauf{position:absolute;left:50%;top:50%;width:52px;height:52px;margin:-26px 0 0 -26px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+  .tKnopf{position:absolute;width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 35% 30%,rgba(214,93,57,.95),rgba(160,56,28,.95));color:#fff;display:grid;place-items:center;font-size:.95rem;font-weight:700;text-align:center;line-height:1.05;border:2px solid rgba(255,255,255,.7);box-shadow:0 4px 12px rgba(0,0,0,.35);user-select:none;transition:transform .08s}
+  .tKnopf.an{background:radial-gradient(circle at 35% 30%,#f7a64a,#e98a2b);color:#2b1d16;transform:scale(.94)}
   #tGreifen{right:calc(24px + env(safe-area-inset-right));bottom:calc(30px + env(safe-area-inset-bottom))}
-  #tArbeit{right:calc(122px + env(safe-area-inset-right));bottom:calc(64px + env(safe-area-inset-bottom));width:72px;height:72px;background:rgba(63,155,79,.85)}
+  #tArbeit{right:calc(122px + env(safe-area-inset-right));bottom:calc(64px + env(safe-area-inset-bottom));width:72px;height:72px;background:radial-gradient(circle at 35% 30%,rgba(66,160,84,.95),rgba(36,106,52,.95))}
   .tKnopf span{font-size:1.6rem;display:block}
 
   /* Tablet hochkant: Panel oben über die ganze Breite, einklappbar */
   @media (orientation:portrait) and (min-width:701px){
-    #nacht{left:8px;right:8px;width:auto;top:calc(66px + env(safe-area-inset-top));max-height:34%}
+    #nacht{left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right));width:auto;top:calc(66px + env(safe-area-inset-top));max-height:34%}
     #nacht p{display:none}
-    #nacht.zu #nachtInhalt{display:none}
-    #nachtZu{display:block;position:absolute;right:10px;top:10px;padding:4px 12px;font-size:.9rem}
+    #nachtZu{display:block}
     #laden{grid-template-columns:repeat(4,1fr)}
     #rangliste{top:auto;bottom:140px}
   }
   /* Handy quer: schmales Panel rechts, kleine Kacheln */
   @media (max-height:500px) and (min-width:701px){
-    .kachel{padding:3px 8px;font-size:.9rem}
-    #nacht{width:250px;top:52px;max-height:calc(100% - 60px);padding:8px}
+    .kachel{padding:3px 10px;min-height:34px;font-size:.88rem}
+    #hudTagKachel{min-width:130px}
+    #hudPause{width:40px;min-height:36px}
+    #nacht{width:340px;top:calc(50px + env(safe-area-inset-top));max-height:calc(100% - 60px);padding:10px}
     #nacht p{display:none}
-    #nacht.zu #nachtInhalt{display:none}
-    #nachtZu{display:block;position:absolute;right:8px;top:6px;padding:3px 10px;font-size:.85rem}
-    #laden button{font-size:.8rem;padding:5px 2px}
-    #laden button .ico{font-size:1.1rem}
-    #bereitKnopf{font-size:1rem;padding:8px}
-    #rangliste{top:52px}
+    #nacht h3{font-size:1.05rem;margin-bottom:2px}
+    #nachtZu{display:block;right:8px;top:8px}
+    #laden{grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+    #laden button{font-size:.78rem;padding:4px 2px;min-height:62px}
+    #laden button .ico{font-size:1.2rem}
+    #nacht .reihe button{min-height:38px;font-size:.8rem}
+    #bereitKnopf{font-size:1rem;padding:6px;min-height:44px;margin-top:6px}
+    #rangliste{top:calc(50px + env(safe-area-inset-top))}
     .tKnopf{width:70px;height:70px}
     #tArbeit{width:60px;height:60px;right:calc(104px + env(safe-area-inset-right));bottom:calc(40px + env(safe-area-inset-bottom))}
+    .karte{padding:16px}
+    #meldung{font-size:2rem}
   }
   @media (max-width:700px){
-    h1{font-size:2.1rem}
-    .oben{gap:5px}
-    .kachel{padding:4px 8px;font-size:.92rem}
-    #hudTagKachel{min-width:110px}
-    #hudMenu{font-size:1.1rem}
-    #nacht{left:8px;right:8px;width:auto;top:calc(64px + env(safe-area-inset-top));max-height:42%;padding:10px}
+    h1{font-size:2.2rem}
+    .karte{padding:20px}
+    .oben{gap:6px;flex-wrap:nowrap}
+    .kachel{padding:4px 8px;min-height:38px;font-size:.88rem;gap:5px}
+    #hudTagKachel{min-width:0;flex:1 1 auto}
+    #hudTag{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    #hudMenu{font-size:1.05rem}
+    #hudMenu::before{display:none}
+    #hudMuenzen{font-size:1rem}
+    #hudSterne{font-size:1rem;letter-spacing:.02em}
+    #nacht{left:calc(8px + env(safe-area-inset-left));right:calc(8px + env(safe-area-inset-right));width:auto;top:calc(60px + env(safe-area-inset-top));max-height:42%;padding:10px 12px}
     #nacht p{display:none}
-    #nacht.zu #nachtInhalt{display:none}
-    #nachtZu{display:block;position:absolute;right:8px;top:8px;padding:4px 10px;font-size:.85rem}
-    #laden{grid-template-columns:repeat(4,1fr)}
-    #laden button{font-size:.78rem;padding:6px 2px}
-    #rangliste{top:auto;bottom:130px;right:8px;width:180px;font-size:.9rem}
+    #nachtZu{display:block;right:8px;top:6px}
+    #laden{grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0}
+    #laden button{font-size:.74rem;padding:4px 2px;min-height:66px}
+    #laden button .ico{font-size:1.3rem}
+    #rangliste{top:auto;bottom:130px;right:8px;width:190px;font-size:.9rem}
     .tiere{grid-template-columns:repeat(3,1fr)}
     #karten .wahl{grid-template-columns:1fr}
+    #meldung{font-size:2rem}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.001ms!important;animation-delay:0s!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+    .konfetti{display:none}
   }
 </style>
 </head>
@@ -224,12 +300,12 @@
     <div class="kachel" id="hudMenu" title="Speisekarte"></div>
     <div class="kachel">🪙 <span id="hudMuenzen">0</span></div>
     <div class="kachel" id="hudSterne" title="Ruf">★★★</div>
-    <button id="hudPause" aria-label="Menü">☰</button>
+    <button id="hudPause" class="zwei" aria-label="Menü">☰</button>
   </div>
   <div id="meldung"></div>
   <div id="hinweis"></div>
   <div id="nacht" hidden>
-    <button id="nachtZu" class="zwei">–</button>
+    <button id="nachtZu" class="zwei" aria-label="Panel ein- oder ausklappen">–</button>
     <h3 id="nachtTitel">Vor Tag 1</h3>
     <div id="nachtInhalt">
       <p>Nachts kannst du umbauen: <b>Greifen</b> hebt Geräte hoch und stellt sie ab, <b>Arbeiten</b> dreht sie. Gekauftes steht an der Tür.</p>
@@ -301,7 +377,7 @@
       <div class="gerichte" id="lobbyGerichte"></div>
     </div>
     <p class="leise" id="lobbyHinweis"></p>
-    <div class="reihe"><button id="lobbyRaus" class="zwei">Verlassen</button><button id="lobbyStart">Küche öffnen</button></div>
+    <div class="reihe"><button id="lobbyRaus" class="gefahr">Verlassen</button><button id="lobbyStart">Küche öffnen</button></div>
     <p class="fehler" id="lobbyFehler"></p>
   </div>
 </div>
@@ -318,6 +394,7 @@
 <!-- Ende -->
 <div class="schirm" id="ende" hidden>
   <div class="karte">
+    <div class="konfetti" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="titelbild" id="endeBild">🏆</div>
     <h2 id="endeTitel">Feierabend</h2>
     <p id="endeText" class="leise"></p>
@@ -336,7 +413,7 @@
       <button id="pauseWeiter">Weiter</button>
       <button id="pauseHilfe" class="zwei">So wird gespielt</button>
       <button id="pauseTon" class="zwei">Ton: an</button>
-      <button id="pauseRaus" class="zwei">Küche verlassen</button>
+      <button id="pauseRaus" class="gefahr">Küche verlassen</button>
     </div>
   </div>
 </div>

@@ -102,7 +102,7 @@
   function textSprite(text, o = {}) {
     const gr = o.gr || 40, rand = o.rand != null ? o.rand : 10;
     const c = document.createElement('canvas'), x = c.getContext('2d');
-    const schrift = `${o.dick || 800} ${gr}px "Barlow Semi Condensed", system-ui, sans-serif`;
+    const schrift = `${o.dick || 800} ${gr}px "Bricolage Grotesque", system-ui, sans-serif`;
     x.font = schrift;
     const w = Math.ceil(x.measureText(text).width) + rand * 2, h = gr + rand * 2;
     c.width = w; c.height = h;
