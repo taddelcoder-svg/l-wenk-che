@@ -30,21 +30,28 @@
 
   /* ---------- three.js ---------- */
   const leinwand = $('#bild');
+  // Grafikstufe: 'niedrig' auf Handys/Touch-Geräten (weniger Partikel, kleinere Schatten), sonst 'hoch'.
+  // Mit ?grafik=niedrig oder ?grafik=hoch von Hand wählbar; bei dauerhaft niedriger Bildrate schaltet das Spiel selbst herunter.
+  let grafik = (() => {
+    const w = new URLSearchParams(location.search).get('grafik');
+    if (w === 'niedrig' || w === 'hoch') return w;
+    return matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 500 ? 'niedrig' : 'hoch';
+  })();
   const renderer = new THREE.WebGLRenderer({ canvas:leinwand, antialias:true });
-  renderer.setPixelRatio(Math.min(2, devicePixelRatio || 1));
+  renderer.setPixelRatio(Math.min(grafik === 'niedrig' ? 1.5 : 2, devicePixelRatio || 1));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   const szene = new THREE.Scene();
-  const himmelTag = new THREE.Color(0xbfe3f5), himmelNacht = new THREE.Color(0x1b2140);
+  const himmelTag = new THREE.Color(0xcfe8f4), himmelNacht = new THREE.Color(0x1b2140);
   szene.background = himmelTag.clone();
   const kamera = new THREE.PerspectiveCamera(40, 1, 0.5, 200);
-  const halb = new THREE.HemisphereLight(0xfff6e8, 0x8a7a66, 0.75);
+  const halb = new THREE.HemisphereLight(0xfff4e2, 0x8f7f68, 0.62);
   szene.add(halb);
-  const sonne = new THREE.DirectionalLight(0xfff1d8, 0.75);
+  const sonne = new THREE.DirectionalLight(0xffefd2, 0.7);
   sonne.position.set(W / 2 - 6, 18, H / 2 + 8);
   sonne.target.position.set(W / 2, 0, H / 2);
   sonne.castShadow = true;
-  sonne.shadow.mapSize.set(2048, 2048);
+  sonne.shadow.mapSize.set(grafik === 'niedrig' ? 1024 : 2048, grafik === 'niedrig' ? 1024 : 2048);
   Object.assign(sonne.shadow.camera, { left:-12, right:12, top:12, bottom:-12, near:2, far:50 });
   sonne.shadow.bias = -0.0008;
   szene.add(sonne, sonne.target);
@@ -54,7 +61,10 @@
     l.position.set(x, 3, z);
     szene.add(l); lampen.push(l);
   }
-  szene.add(LKM.raum(W, H, TUER_X));
+  const raumGrp = LKM.raum(W, H, TUER_X);
+  szene.add(raumGrp);
+  const stimmung = LKU.welt(szene, { halb, sonne, lampen, raum:raumGrp, himmelTag, himmelNacht, qualitaet:grafik });
+  let fx = LKU.effekte(szene, renderer, kamera, grafik);
 
   function kameraSetzen() {
     const a = innerWidth / innerHeight;
@@ -91,13 +101,14 @@
   const HOEHE = { theke:0.93, brett:0.97, herd:0.93, ofen:1.16, fritteuse:0.93, fliessband:0.87, spuele:0.93, spuelmaschine:0.93, tellerregal:0.93, kiste:0.62, muell:0.82, tisch:0.78, greifarm:0.6 };
 
   function ansichtLeeren() {
-    for (const e of ansicht.geraete.values()) { szene.remove(e.grp); if (e.balken) szene.remove(e.balken); }
-    for (const e of ansicht.koeche.values()) szene.remove(e.grp);
-    for (const e of ansicht.gaeste.values()) { szene.remove(e.grp); if (e.balken) szene.remove(e.balken); }
+    for (const e of ansicht.geraete.values()) { entfernen(e.grp); if (e.balken) szene.remove(e.balken); }
+    for (const e of ansicht.koeche.values()) entfernen(e.grp);
+    for (const e of ansicht.gaeste.values()) { entfernen(e.grp); if (e.balken) szene.remove(e.balken); }
     for (const t of ansicht.texte) szene.remove(t.s);
     ansicht.geraete.clear(); ansicht.koeche.clear(); ansicht.gaeste.clear(); ansicht.texte = [];
   }
-  function kinderLeeren(g) { while (g.children.length) g.remove(g.children[0]); }
+  function kinderLeeren(g) { while (g.children.length) { const c = g.children[0]; g.remove(c); LKM.entsorgen(c); } }
+  function entfernen(grp) { szene.remove(grp); LKM.entsorgen(grp); }
 
   function inhaltSchluessel(o) { return [LKM.dingSchluessel(o.it), o.n, o.d, o.sb].join('|'); }
   function inhaltBauen(e, o) {
@@ -118,13 +129,15 @@
       da.add(o.i);
       let e = ansicht.geraete.get(o.i);
       if (!e || e.t !== o.t || e.r !== o.r) {
-        if (e) { szene.remove(e.grp); if (e.balken) szene.remove(e.balken); }
+        if (e) { entfernen(e.grp); if (e.balken) szene.remove(e.balken); }
         e = { grp:LKM.geraet(o), t:o.t, r:o.r, key:null, balken:null };
         szene.add(e.grp);
         ansicht.geraete.set(o.i, e);
       }
       e.grp.position.set(o.x + 0.5, 0, o.y + 0.5);
       e.o = o;
+      // Betriebszustand für Glühen, Messer, Lämpchen: 0 aus, 1 arbeitet, 2 brennt
+      e.grp.zustand = o.it && o.it.k != null ? (o.it.b && o.it.k > 0.3 ? 2 : o.it.k < 1 ? 1 : 0) : o.it && o.it.s != null ? 1 : (o.f > 0 && o.d > 0) ? 1 : 0;
       const k = inhaltSchluessel(o);
       if (k !== e.key) { e.key = k; inhaltBauen(e, o); }
       // Fortschritt: Schneiden, Garen, Spülen – und Warnung, wenn etwas anbrennt
@@ -140,7 +153,7 @@
         e.brennt = !!(o.it && o.it.b && o.it.k > 0.3);
       } else if (e.balken) { e.balken.visible = false; e.brennt = false; }
     }
-    for (const [i, e] of ansicht.geraete) if (!da.has(i)) { szene.remove(e.grp); if (e.balken) szene.remove(e.balken); ansicht.geraete.delete(i); }
+    for (const [i, e] of ansicht.geraete) if (!da.has(i)) { entfernen(e.grp); if (e.balken) szene.remove(e.balken); ansicht.geraete.delete(i); }
   }
 
   function koecheAbgleichen(s) {
@@ -149,7 +162,7 @@
       da.add(p.i);
       let e = ansicht.koeche.get(p.i);
       if (!e || e.a !== p.a) {
-        if (e) szene.remove(e.grp);
+        if (e) entfernen(e.grp);
         const grp = LKM.koch(p.a, FARBEN[p.f % 4]);
         const schild = LKM.textSprite(p.n, { gr:40, grund:'rgba(43,29,22,.72)', rand:8, hoehe:0.34 });
         schild.position.y = 1.62;
@@ -164,11 +177,11 @@
       const tk = p.tr ? p.tr.t + (p.tr.z || '') : '';
       if (tk !== e.trKey) {
         e.trKey = tk;
-        if (e.trMesh) { e.grp.remove(e.trMesh); e.trMesh = null; }
+        if (e.trMesh) { e.grp.remove(e.trMesh); LKM.entsorgen(e.trMesh); e.trMesh = null; }
         if (p.tr) { const m = LKM.geraet({ t:p.tr.t, r:1, z:p.tr.z }); m.scale.setScalar(0.62); m.position.set(0, 0.62, 0.42); e.grp.add(m); e.trMesh = m; }
       }
     }
-    for (const [i, e] of ansicht.koeche) if (!da.has(i)) { szene.remove(e.grp); ansicht.koeche.delete(i); }
+    for (const [i, e] of ansicht.koeche) if (!da.has(i)) { entfernen(e.grp); ansicht.koeche.delete(i); }
   }
 
   function gaesteAbgleichen(s) {
@@ -189,7 +202,7 @@
         e.b = k.b;
       }
       if (k.sv !== e.sv) {
-        if (e.teller) e.grp.remove(e.teller);
+        if (e.teller) { e.grp.remove(e.teller); LKM.entsorgen(e.teller); }
         e.teller = null;
         if (k.sv && k.p === 'isst' || k.sv && k.p === 'bestellt') {
           const t = LKM.ding({ z:'teller', auf:LK.GERICHTE[k.sv].teile.slice() });
@@ -206,7 +219,7 @@
         e.balken.setzen(g, g > 0.5 ? 0x6ad04a : g > 0.25 ? 0xf2c230 : 0xe0453a);
       } else if (e.balken) e.balken.visible = false;
     }
-    for (const [i, e] of ansicht.gaeste) if (!da.has(i)) { szene.remove(e.grp); if (e.balken) szene.remove(e.balken); ansicht.gaeste.delete(i); }
+    for (const [i, e] of ansicht.gaeste) if (!da.has(i)) { entfernen(e.grp); if (e.balken) szene.remove(e.balken); ansicht.gaeste.delete(i); }
   }
 
   function schwebeText(text, x, y, farbe = '#fff') {
@@ -231,6 +244,7 @@
       e.grp.position.set(e.x, 0, e.y);
       e.grp.rotation.y = Math.PI / 2 - e.r;
       e.grp.animieren(dt, Math.min(1.5, e.tempo / 4), !!(p.h || p.tr), eigen ? ich.w : p.w, t);
+      fx.schritt(dt, e, e.x, e.y, e.tempo);
     }
     for (const e of ansicht.gaeste.values()) {
       const g = e.k;
@@ -252,6 +266,7 @@
         if (e.brennt) e.balken.visible = Math.sin(t * 16) > -0.3;
       }
       if (e.grp.anim) e.grp.anim(t);
+      if (e.o) fx.geraet(dt, t, e, HOEHE[e.o.t] || 0.9);
     }
     for (const e of ansicht.gaeste.values()) if (e.balken) e.balken.quaternion.copy(kamera.quaternion);
     for (const x of ansicht.texte) { x.t += dt; x.s.position.y += dt * 0.9; x.s.material.opacity = Math.max(0, 1 - x.t / 1.4); }
@@ -272,10 +287,12 @@
     // Tag und Nacht
     const nacht = sicht && sicht.ph === 'nacht' && modus !== 'menue' ? 1 : 0;
     licht += (nacht - licht) * Math.min(1, dt * 2);
-    szene.background.copy(himmelTag).lerp(himmelNacht, licht);
-    halb.intensity = 0.75 - licht * 0.35;
-    sonne.intensity = 0.75 - licht * 0.55;
-    for (const l of lampen) l.intensity = licht * 0.9;
+    stimmung.aktualisieren(licht, t, dt);
+    halb.intensity = 0.62 - licht * 0.27;
+    sonne.intensity = 0.7 - licht * 0.45;
+    for (const l of lampen) l.intensity = licht * 1.0;
+    fx.luft(dt, t, licht);
+    fx.aktualisieren(dt);
   }
   let licht = 0;
 
@@ -293,6 +310,7 @@
     hudAktualisieren();
   }
   function ereignis(e) {
+    fx.ereignis(e, HOEHE[(sicht && sicht.g.find(g => Math.abs(g.x + 0.5 - e.x) < 0.1 && Math.abs(g.y + 0.5 - e.y) < 0.1) || {}).t] || 0.95);
     switch (e.e) {
       case 'nimm': Ton.nimm(); break;
       case 'leg': case 'muell': case 'gespuelt': Ton.leg(); break;
@@ -796,11 +814,26 @@
   /* ---------- Hauptschleife ---------- */
   let letzt = performance.now();
   function frei(tx, ty) { return LK.innen(tx, ty) && !belegt.has(tx + ',' + ty); }
+  let langsam = 0;
   function schleife(jetzt) {
     requestAnimationFrame(schleife);
-    const dt = Math.min(0.05, (jetzt - letzt) / 1000);
+    const roh = jetzt - letzt;
+    const dt = Math.min(0.05, roh / 1000);
     letzt = jetzt;
+    // Bleibt die Bildrate lange unter ~22 Bildern/s, schaltet die Grafik selbst auf 'niedrig'
+    if (grafik === 'hoch') {
+      if (roh > 45 && roh < 500) langsam++; else if (roh < 30) langsam = Math.max(0, langsam - 2);
+      if (langsam > 150) grafikNiedrig();
+    }
     bild(dt, jetzt);
+  }
+  function grafikNiedrig() {
+    grafik = 'niedrig';
+    renderer.setPixelRatio(Math.min(1.25, devicePixelRatio || 1));
+    kameraSetzen();
+    if (sonne.shadow.map) { sonne.shadow.map.dispose(); sonne.shadow.map = null; }
+    sonne.shadow.mapSize.set(1024, 1024);
+    fx.ambient = false;
   }
   function bild(dt, jetzt) {
     eingabeLesen();
@@ -840,7 +873,8 @@
     bilder(n, dt = 1 / 60) { for (let i = 0; i < n; i++) { letzt += dt * 1000; bild(dt, letzt); } },
     starten:soloStarten, befehl,
     // Kamera zum Ansehen von Modellen: nah(x, z, abstand); nah() setzt zurück
-    nah(x, z, d = 4) { if (x == null) return kameraSetzen(); kamera.position.set(x, d * 0.8, z + d * 0.6); kamera.lookAt(x, 0.6, z); }
+    nah(x, z, d = 4, w = 0, hoch = 0.8) { if (x == null) return kameraSetzen(); kamera.position.set(x + Math.sin(w) * d * 0.6, d * hoch, z + Math.cos(w) * d * 0.6); kamera.lookAt(x, 0.6, z); },
+    get szene() { return szene; }, get grafik() { return grafik; }, get fx() { return fx; }, drehen(n) { licht = n; }, info() { return { aufrufe:renderer.info.render.calls, dreiecke:renderer.info.render.triangles, geometrien:renderer.info.memory.geometries, texturen:renderer.info.memory.textures }; }
   };
 
   /* ---------- Start: Olympia-Ticket, Einladungslink oder Menü ---------- */
