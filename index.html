@@ -534,5 +534,14 @@
   if (document.body) bauen(); else document.addEventListener('DOMContentLoaded', bauen);
 })();
 </script>
+
+<!-- Rangliste der Spielesammlung: meldet Spielzeit, Punkte und Progress -->
+<script>
+window.SLRangAdapter=function(){
+  var f={};try{f=JSON.parse(localStorage.getItem('lk-fortschritt'))||{}}catch(e){}
+  return{punkte:+f.rekord||0,progress:Math.min(100,(+f.xp||0)/400*100)}
+};
+</script>
+<script src="https://rangliste-aoee.onrender.com/melder.js" data-spiel="Löwenküche" defer></script>
 </body>
 </html>
